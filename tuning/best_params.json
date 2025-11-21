@@ -1,0 +1,12 @@
+{
+    "Annoy": {
+        "n_trees": 50
+    },
+    "FAISS": {
+        "nlist": 1600
+    },
+    "HNSW": {
+        "ef_construction": 200,
+        "M": 16
+    }
+}

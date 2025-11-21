@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+
+# Virtual envs
+venv/
+.env/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Notebook outputs
+notebooks/*.png
+notebooks/*.csv
+
+# LaTeX build
+tex/*.*
+!tex/*.tex
+!tex/*.pdf
+
+# System
+.DS_Store

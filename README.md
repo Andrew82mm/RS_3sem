@@ -40,14 +40,30 @@ This is a preliminary version of a course project comparing K-Nearest Neighbors 
 │   └── raw
 │       ├── movies.csv
 │       └── ratings.csv
+├── knn_comparison
+│   ├── annoy.py
+│   ├── base.py
+│   ├── bench.py
+│   ├── data.py
+│   ├── exact.py
+│   ├── faiss.py
+│   ├── hnsw.py
+│   ├── __init__.py
+│   ├── utils.py
+│   └── viz.py
 ├── notebooks
 │   └── kursah32m.ipynb
 ├── README.md
-└── tex
-    ├── Reportv1.pdf
-    └── Reportv1.tex
-
-## Future Work
-- Improve RAM usage tracking implementation
-- Enhance result stability and reproducibility
+├── requirements.txt
+├── results
+│   ├── knn_comparison.png
+│   └── knn_results.csv
+├── run_comparison.py
+├── run_tuning.py
+├── tex
+│   ├── Reportv1.pdf
+│   └── Reportv1.tex
+└── tuning
+    ├── best_params.json
+    └── tuning_results.csv
 
