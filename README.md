@@ -73,7 +73,7 @@ data/raw/ratings.csv
 ### 5. Generate embeddings (SVD)
 
 ```bash
-python knn_comparison/data.py
+python data.py
 ```
 
 This step will:
