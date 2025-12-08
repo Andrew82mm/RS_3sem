@@ -17,9 +17,13 @@ notebooks/*.png
 notebooks/*.csv
 
 # LaTeX build
-tex/*.*
+tex/*
 !tex/*.tex
 !tex/*.pdf
+!tex/presentation/
+tex/presentation/*
+!tex/presentation/*.tex
+!tex/presentation/*.pdf
 
 # System
 .DS_Store

@@ -1,0 +1,292 @@
+\documentclass[9pt]{beamer}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+
+\usetheme{CambridgeUS}
+
+% Уменьшенный footline
+\setbeamertemplate{footline}{
+	\leavevmode%
+	\hbox{%
+		\begin{beamercolorbox}[wd=.333333\paperwidth,ht=1.5ex,dp=0.75ex,center]{author in head/foot}%
+			\usebeamerfont{author in head/foot}\tiny\insertshortauthor
+		\end{beamercolorbox}%
+		\begin{beamercolorbox}[wd=.333333\paperwidth,ht=1.5ex,dp=0.75ex,center]{title in head/foot}%
+			\usebeamerfont{title in head/foot}\tiny\insertshorttitle
+		\end{beamercolorbox}%
+		\begin{beamercolorbox}[wd=.333333\paperwidth,ht=1.5ex,dp=0.75ex,right]{date in head/foot}%
+			\usebeamerfont{date in head/foot}\tiny\insertframenumber{} / \inserttotalframenumber\hspace*{2ex} 
+	\end{beamercolorbox}}%
+	\vskip0pt%
+}
+
+\title[Применение KNN]{Применение алгоритмов K-ближайших соседей в коллаборативных рекомендательных системах}
+\author[А. Сергиенко]{Сергиенко Андрей}
+\date{2025}
+
+\begin{document}
+	
+	% Титульный слайд
+	\begin{frame}[plain]
+		\centering
+		
+		{\small САНКТ-ПЕТЕРБУРГСКИЙ ГОСУДАРСТВЕННЫЙ УНИВЕРСИТЕТ \\[2mm]
+			Искусственный интеллект и наука о данных}
+		
+		\vspace{1 cm}
+		
+		{\Large\bfseries
+			Применение алгоритмов K-ближайших соседей \\[2mm]
+			в коллаборативных рекомендательных системах
+		}
+		
+		\vspace{5 mm}
+		
+		{\large Отчёт о прохождении учебной (ознакомительной) практики}
+		
+		\vfill
+		
+		\vspace{7 mm}
+		
+		\raggedright
+		{\normalsize
+			\textbf{Автор:} \\
+			Сергиенко Андрей \\[4mm]
+			
+			\textbf{Научный руководитель:} \\
+			старший преподаватель кафедры системного программирования \\
+			Юрий Александрович Андреев
+		}
+		
+		\vspace{1.2cm}
+		
+		\centering
+		Санкт-Петербург, 2025
+	\end{frame}
+	
+	\begin{frame}{Постановка задачи}
+		\begin{block}{Цель работы}
+			Исследовать эффективность различных алгоритмов K-ближайших соседей (KNN) для реализации коллаборативной рекомендательной системы.
+		\end{block}
+		
+		\begin{block}{Задачи}
+			\begin{itemize}
+				\item Изучить принципы коллаборативной фильтрации и KNN
+				\item Реализовать и сравнить 4 метода поиска:
+				\begin{itemize}
+					\item \textbf{Exact KNN} (scikit-learn) — эталонный метод
+					\item \textbf{Annoy} (Spotify) — случайные деревья
+					\item \textbf{FAISS} (Meta) — кластеризация IVF
+					\item \textbf{HNSW} — иерархические графы
+				\end{itemize}
+				\item Провести измерения производительности, точности и памяти
+				\item Сформулировать рекомендации по применению
+			\end{itemize}
+		\end{block}
+	\end{frame}
+	
+	\begin{frame}{Методология}
+		\begin{block}{Датасет MovieLens (32M)}
+			\begin{itemize}
+				\item \textbf{Фильтрация данных:}
+				\begin{itemize}
+					\item Пользователи: > 50 оценок → \textcolor{blue}{126 588 чел.}
+					\item Фильмы: > 10 оценок → \textcolor{blue}{30 521 шт.}
+				\end{itemize}
+				\item \textbf{Матрица:} $126\,588 \times 30\,521$ (\textcolor{red}{99.24\% разреженность})
+			\end{itemize}
+		\end{block}
+		
+		\begin{block}{Снижение размерности через TruncatedSVD}
+			\begin{itemize}
+				\item \textbf{Цель:} Переход от разреженного пространства к плотным эмбеддингам
+				\item \textbf{Размерность:} 128 латентных компонентов
+				\item \textbf{Результат:} Объяснено 42.07\% дисперсии, сжатие в 96 раз
+			\end{itemize}
+		\end{block}
+		
+		\vspace{0.3cm}
+		\centering
+		\small{$R \approx U_k \Sigma_k V_k^T$ — сохраняем только главные компоненты}
+	\end{frame}
+	
+	\begin{frame}{Архитектура измерений}
+		\begin{block}{Изолированные процессы для точности}
+			\begin{columns}[T]
+				\begin{column}{0.48\textwidth}
+					\textbf{Orchestrator:}
+					\begin{itemize}
+						\item Подготовка данных
+						\item Генерация ground truth
+						\item Запуск worker-ов
+						\item Агрегация результатов
+					\end{itemize}
+				\end{column}
+				\begin{column}{0.48\textwidth}
+					\textbf{Worker (subprocess):}
+					\begin{itemize}
+						\item Чистая память
+						\item Построение индекса
+						\item Выполнение запросов
+						\item Возврат метрик
+					\end{itemize}
+				\end{column}
+			\end{columns}
+		\end{block}
+		
+		\begin{block}{Метрики оценки}
+			\begin{itemize}
+				\item \textbf{Производительность:} Время построения, время запроса, память (psutil)
+				\item \textbf{Точность:} Recall@20, Precision@20 (сравнение с Exact KNN)
+				\item \textbf{Тестирование:} 100 случайных запросов (seed=42)
+			\end{itemize}
+		\end{block}
+	\end{frame}
+	
+	\begin{frame}{Оптимизация гиперпараметров}
+	\begin{block}{Композитная метрика Grid Search}
+		\[
+		\text{Score} = 0.4 \cdot \text{Recall@20} - 0.6 \cdot \ln(1 + \text{QueryTime}_{\text{ms}})
+		\]
+		\small{Баланс точности (40\%) и скорости (60\%) для production}
+	\end{block}
+	
+	\begin{center}
+		\begin{tabular}{lll}
+			\toprule
+			\textbf{Метод} & \textbf{Оптимальные параметры} & \textbf{Score} \\
+			\midrule
+			Annoy & n\_trees=50 & 0.199 \\
+			FAISS & nlist=1600 & 0.291 \\
+			HNSW & ef\_construction=200, M=16 & \textbf{0.327} \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\vspace{0.3cm}
+	\small{HNSW показал наилучший компромисс при минимальных параметрах}
+	\end{frame}
+	
+	\begin{frame}{Результаты: Точность}
+		\begin{center}
+			\begin{tabular}{lccc}
+				\toprule
+				\textbf{Метод} & \textbf{Recall@20} & \textbf{Precision@20} & \textbf{Потеря точности} \\
+				\midrule
+				Exact KNN & 1.000 & 1.000 & --- \\
+				HNSW & 0.973 & 0.973 & 2.7\% \\
+				FAISS & 0.939 & 0.939 & 6.1\% \\
+				Annoy & 0.760 & 0.760 & 24.0\% \\
+				\bottomrule
+			\end{tabular}
+		\end{center}
+		
+		\vspace{0.5cm}
+		
+		\begin{alertblock}{Ключевой вывод}
+			\textbf{HNSW} достигает почти эталонной точности (97.3\%), что критично для персональных рекомендаций, где каждый процент влияет на вовлечённость пользователей.
+		\end{alertblock}
+	\end{frame}
+	
+	\begin{frame}{Результаты: Производительность}
+		\begin{center}
+			\begin{tabular}{lcc}
+				\toprule
+				\textbf{Метод} & \textbf{Время запроса (user)} & \textbf{Ускорение} \\
+				\midrule
+				Exact KNN & 139.59 мс & 1× \\
+				Annoy & 0.19 мс & 734× \\
+				FAISS & 0.18 мс & 775× \\
+				HNSW & 0.12 мс & \textbf{1163×} \\
+				\bottomrule
+			\end{tabular}
+		\end{center}
+		
+		\vspace{0.5cm}
+		
+		\begin{block}{Время построения индекса (user-based)}
+			\begin{itemize}
+				\item Exact KNN: 0.006 с (без структур)
+				\item Annoy: 2.78 с
+				\item HNSW: 7.27 с
+				\item FAISS: 8.54 с
+			\end{itemize}
+		\end{block}
+		
+		\small{\textit{Замедление построения окупается тысячекратным ускорением запросов}}
+	\end{frame}
+	
+	\begin{frame}{Результаты: Потребление памяти}
+		\begin{center}
+			\begin{tabular}{lcc}
+				\toprule
+				\textbf{Метод} & \textbf{Peak Memory} & \textbf{Относительно} \\
+				\midrule
+				Exact KNN & 0.00 МБ & (базовая линия) \\
+				HNSW & 121.05 МБ & 1.0× \\
+				FAISS & 131.54 МБ & 1.1× \\
+				Annoy & 314.74 МБ & 2.6× \\
+				\bottomrule
+			\end{tabular}
+		\end{center}
+		
+		\vspace{0.5cm}
+		
+		\begin{alertblock}{Баланс скорость—точность—память}
+			\textbf{HNSW} лидирует по всем критериям:
+			\begin{itemize}
+				\item Максимальная скорость запросов (0.12 мс)
+				\item Высочайшая точность среди ANN (97.3\%)
+				\item Минимальное потребление памяти (121 МБ)
+			\end{itemize}
+		\end{alertblock}
+	\end{frame}
+	
+	\begin{frame}{Итоговое сравнение}
+	\begin{center}
+		\includegraphics[width=1.0\textwidth]{knn_comparison.png}
+	\end{center}
+	\end{frame}
+	
+	\begin{frame}{Выводы и рекомендации}
+		\begin{block}{1. Exact KNN — Эталон для тестирования}
+			Офлайн-аналитика, малые датасеты (< 10K объектов)
+		\end{block}
+		
+		\begin{block}{2. Annoy — Максимальная скорость}
+			Когда допустима потеря 24\% точности: предварительная фильтрация, low-priority рекомендации
+		\end{block}
+		
+		\begin{block}{3. FAISS — Масштабируемость + GPU}
+			Большие системы (> 1M объектов), особенно с GPU-ускорением
+		\end{block}
+		
+		\begin{block}{4. \textcolor{blue}{HNSW — Production-стандарт}}
+			\textbf{Оптимальный выбор:} Почти эталонная точность (97.3\%), максимальная скорость (1163× быстрее), минимальная память (121 МБ). Рекомендован для высоконагруженных систем реального времени.
+		\end{block}
+	\end{frame}
+	
+	\begin{frame}
+		\begin{center}
+			\Huge{Спасибо за внимание!}
+			
+			\vspace{1.5cm}
+			
+			\large{Вопросы?}
+			
+			\vspace{0.5 cm}
+			
+			\small{Код и результаты доступны в репозитории проекта}
+			
+			\vspace{0.2 cm}
+			
+			\includegraphics[width=0.3\textwidth]{qr.png}
+		\end{center}
+	\end{frame}
+	
+\end{document}
